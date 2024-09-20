@@ -17,61 +17,6 @@ resource "aws_vpc" "tf-course-vpc" {
   }
 }
 
-#creating Internet gateway
-resource "aws_internet_gateway" "tf-course-ig" {
-  vpc_id = aws_vpc.tf-course-vpc.id
-
-  tags = {
-    Name = "thaw-ig"
-  }
-}
-
-#creating router table
-resource "aws_route_table" "tf-course-rt" {
-  vpc_id = aws_vpc.tf-course-vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.tf-course-ig.id
-  }
-
-  tags = {
-    Name = "thaw-rt"
-  }
-}
-
-
-#Create route table associations
-resource "aws_route_table_association" "public" {
-  depends_on     = [aws_subnet.public_subnets]
-  route_table_id = aws_route_table.tf-course-rt.id
-  for_each       = aws_subnet.public_subnets
-  subnet_id      = each.value.id
-}
-# #creating S3 bucket
-# resource "aws_s3_bucket" "tf-course-s3" {
-#   bucket = "tf-course-${random_id.tf-course-rm.hex}"
-
-#   tags = {
-#     Name        = "thaw-s3"
-#     Environment = "tf-course-dev"
-#   }
-# }
-
-# #creating s3 bucket ownership
-# resource "aws_s3_bucket_ownership_controls" "tf-course-s3-oc" {
-#   bucket = aws_s3_bucket.tf-course-s3.id
-
-#   rule {
-#     object_ownership = "BucketOwnerPreferred"
-#   }
-# }
-
-#testing random id resourse
-resource "random_id" "tf-course-rm" {
-  byte_length = 16
-}
-
 #creating vpc subnet
 resource "aws_subnet" "tf-course-subnet" {
   vpc_id                  = aws_vpc.tf-course-vpc.id
@@ -98,6 +43,36 @@ resource "aws_subnet" "public_subnets" {
   }
 }
 
+#creating Internet gateway
+resource "aws_internet_gateway" "tf-course-ig" {
+  vpc_id = aws_vpc.tf-course-vpc.id
+
+  tags = {
+    Name = "thaw-ig"
+  }
+}
+
+#creating route table
+resource "aws_route_table" "tf-course-rt" {
+  vpc_id = aws_vpc.tf-course-vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.tf-course-ig.id
+  }
+
+  tags = {
+    Name = "thaw-rt"
+  }
+}
+
+#Create route table associations
+resource "aws_route_table_association" "public" {
+  depends_on     = [aws_subnet.public_subnets]
+  route_table_id = aws_route_table.tf-course-rt.id
+  for_each       = aws_subnet.public_subnets
+  subnet_id      = each.value.id
+}
 
 /* creating aws instance using local variable
 and ami from the data block
@@ -115,12 +90,13 @@ resource "aws_instance" "tf-course-ec2" {
     host        = self.public_ip
   }
 
-  # Leave the first part of the block unchanged and create our `local-exec` provisioner
+  #Creating `local-exec` provisioner to change the private key's privilege
 
   provisioner "local-exec" {
     command = "chmod 600 ${local_file.private_key_pem.filename}"
   }
 
+  #Creating remote-exec to install web service in EC2
   provisioner "remote-exec" {
     inline = [
       "sudo rm -rf /tmp",
@@ -162,7 +138,7 @@ resource "aws_key_pair" "tf-course-aws-key" {
 
 }
 
-# Security Groups
+# Createing Security Group for SSH
 resource "aws_security_group" "ingress-ssh" {
   name   = "allow-all-ssh"
   vpc_id = aws_vpc.tf-course-vpc.id
@@ -209,6 +185,7 @@ resource "aws_security_group" "vpc-web" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  # Creating security group for PING
 }
 resource "aws_security_group" "vpc-ping" {
   name        = "vpc-ping"
@@ -228,4 +205,28 @@ resource "aws_security_group" "vpc-ping" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+# #creating S3 bucket
+# resource "aws_s3_bucket" "tf-course-s3" {
+#   bucket = "tf-course-${random_id.tf-course-rm.hex}"
+
+#   tags = {
+#     Name        = "thaw-s3"
+#     Environment = "tf-course-dev"
+#   }
+# }
+
+# #creating s3 bucket ownership
+# resource "aws_s3_bucket_ownership_controls" "tf-course-s3-oc" {
+#   bucket = aws_s3_bucket.tf-course-s3.id
+
+#   rule {
+#     object_ownership = "BucketOwnerPreferred"
+#   }
+# }
+
+#testing random id resourse
+resource "random_id" "tf-course-rm" {
+  byte_length = 16
 }
