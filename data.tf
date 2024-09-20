@@ -15,3 +15,7 @@ data "aws_ami" "ubuntu" {
 data "aws_region" "vpc-region" {
 
 }
+
+data "aws_availability_zones" "available" {
+
+}
